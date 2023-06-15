@@ -1,9 +1,11 @@
 from typing import Any
-from mini_rec_sys.trainers.logger import Logger
+from mini_rec_sys.trainers import Logger
+
 
 class Stopper:
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         raise NotImplementedError()
+
 
 class StopByEpochs(Stopper):
     def __init__(self, n_epochs=1000) -> None:

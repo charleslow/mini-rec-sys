@@ -14,12 +14,14 @@ class Logger:
             self.filename = path
         self.stats = []
         self.init_time = datetime.datetime.now()
+        self.epoch = 1
 
     def log(self, stats: dict):
-        """Log statistics for the current iteration."""
+        """Log statistics for the current epoch."""
         diff = (datetime.datetime.now() - self.init_time).total_seconds() / 60
-        stats.update({"elapsed_mins": round(diff, 1)})
+        stats.update({"epoch": self.epoch, "elapsed_mins": round(diff, 1)})
         self.stats.append(stats)
+        self.epoch += 1
         df = pd.DataFrame(self.stats)
         df.to_csv(self.filename, index=False)
 
@@ -42,7 +44,7 @@ class Logger:
         best = max(metric)
         return latest >= best
 
-    def has_not_progressed(self, col, k=5):
+    def has_not_progressed(self, col: str, k : int=5):
         """
         Check whether the metric in col has not progressed in the last k rounds.
         """
