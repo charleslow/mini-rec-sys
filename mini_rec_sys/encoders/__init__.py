@@ -1,4 +1,4 @@
-from encoders import (
+from .encoders import (
     BaseBertEncoder,
     DistilBertEncoder,
     MiniLmEncoder,
