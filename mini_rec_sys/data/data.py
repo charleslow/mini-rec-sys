@@ -25,7 +25,7 @@ class Session:
 
     session_id: Union[int, str]
     positive_items: List[Item] = Field(
-        None,
+        ...,
         description="Items that received a positive relevance signal in this session.",
     )
     relevances: List[Union[int, float]] = Field(
@@ -42,6 +42,7 @@ class Session:
     def relevances_more_than_zero(cls, relevances):
         if not all([rel > 0 for rel in relevances]):
             raise AssertionError("All relevances must be more than zero!")
+        return relevances
 
     @validator("relevances")
     def relevances_same_length_as_positive_items(cls, relevances, values):
@@ -50,8 +51,10 @@ class Session:
             raise AssertionError(
                 "Length of relevances and positive_items must be the same!"
             )
+        return relevances
 
     @validator("negative_items")
     def negative_positive_items_no_overlap(cls, negative_items, values):
         if len(set(negative_items).intersection(values["positive_items"])) > 0:
             raise AssertionError("negative_items and positive_items cannot overlap!")
+        return negative_items
