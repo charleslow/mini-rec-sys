@@ -12,11 +12,12 @@ class TestSession:
         )
 
     def test_differing_relevances_and_positive_items_length_raises_error(self):
-        session = Session(
-            session_id="123",
-            positive_items=[Item("a"), Item("b")],
-            relevances=[1, 2],
-        )
+        with pytest.raises(ValidationError):
+            session = Session(
+                session_id="123",
+                positive_items=[Item("a"), Item("b")],
+                relevances=[1, 2, 3],
+            )
 
     def test_required_fields(self):
         with pytest.raises(ValidationError):
