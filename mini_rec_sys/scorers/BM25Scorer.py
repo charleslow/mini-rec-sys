@@ -55,7 +55,7 @@ class BM25Scorer(BaseScorer):
         super().__init__(cols=[query_key, test_documents_key])
         self.query_key = query_key
         self.test_documents_key = test_documents_key
-        self.fields = fields
+        self.fields = fields if isinstance(fields, list) else [fields]
         self.set_field_weights(field_weights)
         self.set_params(params)
         self.non_alphabets = re.compile(r"[^a-zA-Z\s]")
