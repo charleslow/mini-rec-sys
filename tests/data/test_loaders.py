@@ -1,5 +1,7 @@
 from mini_rec_sys.data import Loader
 
+from pdb import set_trace
+
 
 class TestLoader:
     default_documents = {
@@ -17,3 +19,8 @@ class TestLoader:
         loader = Loader(data=self.default_documents, load_fn=lambda x: x["title"])
         for i in self.default_documents:
             assert loader.load(i) == self.default_documents[i]["title"]
+
+    def test_iterator(self):
+        loader = Loader(data=self.default_documents)
+        items = set([v["text"] for v in iter(loader)])
+        assert items == set([v["text"] for v in self.default_documents.values()])
