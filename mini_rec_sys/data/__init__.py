@@ -1,2 +1,2 @@
-from .data import Session, User, Item
+from .data import Session, SessionCollection
 from .loaders import Loader

@@ -93,7 +93,7 @@ class Loader:
         for id, row in tqdm(generator):
             cache[id] = row
 
-        if self.db_location.startswith("dbfs:/"):
+        if self.db_location and self.db_location.startswith("dbfs:/"):
             directory = cache.directory
             copytree(directory, self.db_location)
             cache = Cache(self.db_location)
@@ -113,13 +113,13 @@ class Loader:
                 id = row.pop(self.id_name)
                 yield id, row
 
-    def load_object(self, id: str):
+    def load_object(self, id: int | str):
         """
         Load the raw object for id.
         """
         return self.cache.get(id, None)
 
-    def load(self, id: str):
+    def load(self, id: int | str):
         """
         Load the object for id, using load_fn to process it before returning.
         """
