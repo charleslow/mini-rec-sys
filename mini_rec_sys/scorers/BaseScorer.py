@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Any
 
 
 class BaseScorer:
@@ -15,6 +16,9 @@ class BaseScorer:
 
     def __init__(self, cols: list[str]) -> None:
         self.cols = cols
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        return self.score(*args, **kwargs)
 
     def score(self, input_data: dict | list[dict]):
         raise NotImplementedError()
