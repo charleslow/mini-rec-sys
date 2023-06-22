@@ -9,7 +9,8 @@ class TestBM25Scorer:
     }
 
     def test_build_and_score(self):
-        input_data = {"query": "mouse", "docs": list(self.default_documents.values())}
+        test_docs = sorted(self.default_documents.items(), key=lambda x: x[0])
+        input_data = {"query": "mouse", "docs": [doc[1] for doc in test_docs]}
         scorer = BM25Scorer(
             "query", "docs", self.default_documents, fields=["title", "text"]
         )
