@@ -22,5 +22,5 @@ class TestLoader:
 
     def test_iterator(self):
         loader = Loader(data=self.default_documents)
-        items = set([v["text"] for v in iter(loader)])
+        items = set([v["text"] for k, v in iter(loader)])
         assert items == set([v["text"] for v in self.default_documents.values()])

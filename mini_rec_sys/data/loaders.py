@@ -57,13 +57,20 @@ class Loader:
                 f"Loading / initializing database with {len(self.cache)} entries at {db_location}.."
             )
 
+    def get_files_from_path(self, path: str, suffix="parquet"):
+        """Get a list of .suffix files in path."""
+        if path.endswith(suffix):
+            return [path]
+        files = Path(path).glob(f"*.{suffix}")
+        return list(files)
+
     def populate_db(self, data: str | dict):
         # TODO: clean up temporary cache files.
         if isinstance(data, str):
-            parquet_files = Path(data).glob("*.parquet")
-            num_parquet_files = len(list(parquet_files))
-            json_files = Path(data).glob("*.json")
-            num_json_files = len(list(json_files))
+            parquet_files = self.get_files_from_path(data, "parquet")
+            num_parquet_files = len(parquet_files)
+            json_files = self.get_files_from_path(data, "json")
+            num_json_files = len(json_files)
             assert not (
                 num_parquet_files > 0 and num_json_files > 0
             ), f"Should only have either .parquet or .json files in {data}."
@@ -127,3 +134,15 @@ class Loader:
         if object is None:
             return None
         return self.load_fn(object)
+
+    def __get_item__(self, index: int):
+        return
+
+    def __iter__(self):
+        self.keys = self.cache.iterkeys()
+        return self
+
+    def __next__(self):
+        k = next(self.keys)
+        result = self.cache[k]
+        return k, result
