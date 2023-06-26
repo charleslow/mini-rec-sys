@@ -1,6 +1,6 @@
 from mini_rec_sys.evaluators import Evaluator
 from mini_rec_sys.scorers import BM25Scorer
-from mini_rec_sys.data import Session, SessionCollection, Loader
+from mini_rec_sys.data import Session, SessionCollection, Loader, SessionLoader
 
 
 class TestEvaluator:
@@ -10,15 +10,17 @@ class TestEvaluator:
         3: {"title": "avocado", "text": "i am avocado. babobabo."},
     }
     collection = SessionCollection(
-        sessions=[
-            Session(
-                session_id=1,
-                positive_items=[1, 2],
-                positive_relevances=[2, 1],
-                negative_items=[3],
-                query="mouse",
-            )
-        ],
+        session_loader=SessionLoader(
+            data={
+                1: Session(
+                    session_id=1,
+                    positive_items=[1, 2],
+                    positive_relevances=[2, 1],
+                    negative_items=[3],
+                    query="mouse",
+                )
+            }
+        ),
         item_loader=Loader(data=default_documents),
     )
     bm25_scorer = BM25Scorer(

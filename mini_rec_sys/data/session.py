@@ -1,8 +1,6 @@
-from pydantic import Field, validator, BaseModel
+from pydantic import Field, validator
 from pydantic.dataclasses import dataclass
-from typing import List, Optional, Union
-from mini_rec_sys.data.loaders import Loader
-from pdb import set_trace
+from typing import Optional
 
 
 @dataclass
@@ -64,47 +62,3 @@ class Session:
             for item, rel in zip(self.positive_items, self.positive_relevances)
         }
         self.relevances = [relevance_dict.get(item, 0) for item in self.items]
-
-
-class SessionCollection(BaseModel):
-    """A collection of sessions which forms a training or evaluation set.
-
-    Besides the Session(s) themselves, the SessionCollection can also specify
-    loaders which can be used to load more metadata about each User or Item within
-    the Sessions, for e.g. each Item may have a description. These metadata will
-    be made available to classes training or evaluating on the SessionCollection.
-    """
-
-    sessions: List[Session]
-    item_loader: Optional[Loader] = None
-    user_loader: Optional[Loader] = None
-
-    class Config:
-        arbitrary_types_allowed = True
-
-    def load_item(self, item_id: int | str):
-        res = {"item_id": item_id}
-        if (
-            self.item_loader is None
-            or (attrs := self.item_loader.load(item_id)) is None
-        ):
-            return res
-        res.update(attrs)
-        return res
-
-    def load_items(self, items: list[int | str] | int | str):
-        if isinstance(items, list):
-            return [self.load_item(item) for item in items]
-        return self.load_item(items)
-
-    def load_user(self, user_id: int | str):
-        res = {"user_id": user_id}
-        if self.user_loader is None:
-            return res
-        res.update(self.user_loader.load(user_id))
-        return res
-
-    def load_users(self, users: list[int | str] | int | str):
-        if isinstance(users, list):
-            return [self.load_user(user) for user in users]
-        return self.load_user(users)

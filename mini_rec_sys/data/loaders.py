@@ -1,11 +1,11 @@
-from __future__ import annotations
 from diskcache import Cache
 from pathlib import Path
 from tqdm import tqdm
 import pandas as pd
 import json
-from pdb import set_trace
 from shutil import copytree
+
+from mini_rec_sys.data.session import Session
 
 
 class Loader:
@@ -135,9 +135,6 @@ class Loader:
             return None
         return self.load_fn(object)
 
-    def __get_item__(self, index: int):
-        return
-
     def __iter__(self):
         self.keys = self.cache.iterkeys()
         return self
@@ -146,3 +143,22 @@ class Loader:
         k = next(self.keys)
         result = self.cache[k]
         return k, result
+
+
+class SessionLoader(Loader):
+    """
+    Specific loader for sessions, does some simple validation.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.check_returns_session()
+
+    def check_returns_session(self, n=50):
+        for i, v in enumerate(iter(self)):
+            session_id, session = v
+            assert isinstance(
+                session, Session
+            ), "SessionLoader must load Session objects."
+            if i >= n:
+                break
