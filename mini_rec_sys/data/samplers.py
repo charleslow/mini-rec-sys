@@ -17,7 +17,7 @@ class BatchedSequentialSampler(Sampler):
         )
 
     def __iter__(self):
-        return self.sampler.__iter__
+        return self.sampler.__iter__()
 
 
 # class SimpleSampler(Sampler):
