@@ -16,6 +16,10 @@ class TestSampler:
         )
         sampler = BatchedSequentialSampler(dataset, batch_size=2, drop_last=False)
         batches = [batch for batch in iter(sampler)]
-        assert len(batches) == 1
+        N = len(default_session_data)
+        assert len(batches) == N / 2
         assert len(batches[0]) == 2
-        assert set(batches[0]) == set(["session1", "session2"])
+        collect_batches = set()
+        for batch in batches:
+            collect_batches.update(batch)
+        assert collect_batches == set(default_session_data.keys())

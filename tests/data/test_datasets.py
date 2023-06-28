@@ -1,4 +1,5 @@
-from mini_rec_sys.data import Session, SessionDataset, Dataset
+from mini_rec_sys.data import Session, SessionDataset
+from mini_rec_sys.data.datasets import Dataset
 from pydantic.dataclasses import ValidationError
 import pytest
 
