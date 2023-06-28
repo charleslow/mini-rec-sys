@@ -18,3 +18,4 @@ class TestSampler:
         batches = [batch for batch in iter(sampler)]
         assert len(batches) == 1
         assert len(batches[0]) == 2
+        assert set(batches[0]) == set(["session1", "session2"])
