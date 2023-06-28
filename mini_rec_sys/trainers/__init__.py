@@ -1,2 +1,2 @@
-from logger import Logger
-from stoppers import Stopper, StopByEpochs, StopByProgress
+from .base_trainers import BaseModel, train
+from .DPRModel import DPRModel
