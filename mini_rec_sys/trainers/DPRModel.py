@@ -8,6 +8,8 @@ import random
 from mini_rec_sys.data import Session, ItemDataset, SessionDataset, Sampler
 from mini_rec_sys.trainers.base_trainers import BaseModel
 from mini_rec_sys.encoders import BaseBertEncoder
+from mini_rec_sys.scorers import DenseScorer
+from mini_rec_sys.evaluators import Evaluator
 
 import torch
 import torch.nn.functional as F
@@ -40,6 +42,7 @@ class DPRModel(BaseModel):
         learning_rate: float = 1e-5,
         val_dataset: SessionDataset = None,
         val_batch_size: int = 32,
+        validation_method: str = "default",
     ) -> None:
         super().__init__(
             train_dataset=train_dataset,
@@ -54,6 +57,8 @@ class DPRModel(BaseModel):
         self.item_text_key = item_text_key
         self.q_encoder = q_encoder
         self.p_encoder = p_encoder
+        assert validation_method in ["default", "rerank"]
+        self.validation_method = validation_method
 
     def forward(self, batch: list[dict]):
         triplets = self.load_triplets(batch)
@@ -111,3 +116,21 @@ class DPRModel(BaseModel):
         diagonal of the similarity matrix.
         """
         return -F.log_softmax(S, dim=1).trace() / len(S)
+
+    def validation_step(self, batch: list[dict], batch_idx):
+        if self.validation_method == "default":
+            return super().validation_step(batch, batch_idx)
+        elif self.validation_method == "rerank":
+            return self.rerank_validation(batch, batch_idx)
+
+    def rerank_validation(self, batch: list[dict], batch_idx):
+        # Use a DenseScorer to rerank and submit ndcg
+        scorer = DenseScorer(
+            query_key=self.query_key,
+            test_documents_key="item_attributes",
+            passage_text_key=self.item_text_key,
+            q_encoder=self.q_encoder,
+            p_encoder=self.p_encoder,
+            batch_size=self.val_batch_size,
+        )
+        Evaluator()

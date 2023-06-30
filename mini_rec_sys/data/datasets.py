@@ -7,6 +7,11 @@ from shutil import copytree
 import torch
 
 from mini_rec_sys.data.session import Session
+from mini_rec_sys.constants import (
+    ITEM_ATTRIBUTES_NAME,
+    USER_ATTRIBUTES_NAME,
+    SESSION_NAME,
+)
 from pdb import set_trace
 
 
@@ -257,14 +262,6 @@ class SessionDataset(Dataset):
         return session.negative_items is not None
 
     def __getitem__(self, id: int | str):
-        """
-        Returns a dictionary
-            {
-                "session": session object,
-                "user_attributes": attributes for the user in session
-                "item_attributes": attributes for each item in session
-            }
-        """
         session = super().__getitem__(id)
         if session is None:
             return None
@@ -278,10 +275,13 @@ class SessionDataset(Dataset):
             session.user if self.user_dataset is None else self.load_users(session.user)
         )
         return {
-            "session": session,
-            "user_attributes": user_attributes,
-            "item_attributes": item_attributes,
+            SESSION_NAME: session,
+            USER_ATTRIBUTES_NAME: user_attributes,
+            ITEM_ATTRIBUTES_NAME: item_attributes,
         }
+
+    def load(self, id: int | str):
+        return self.__getitem__(id)
 
     def load_item(self, item_id: int | str):
         res = {"item_id": item_id}
@@ -318,7 +318,7 @@ class SessionDataset(Dataset):
         Generates a new SessionDataset object that only contains a subset of
         keys from the parent, based on whether `split_fn(key)` is True.
 
-        Note that it reuses the same cache instance as the parent, just that we
+        Note that it reuses the same cache as the parent, just that we
         restrict the keys for the child SessionDataset instance.
         """
         subset_ids = [k for k in self.iterkeys() if split_fn(k)]

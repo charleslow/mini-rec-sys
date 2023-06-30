@@ -1,8 +1,14 @@
 import pandas as pd
 import numpy as np
 import math
+from torch.utils.data import DataLoader
 from mini_rec_sys.scorers import BaseScorer
-from mini_rec_sys.data import SessionCollection, Session
+from mini_rec_sys.data import Session, SessionDataset
+from mini_rec_sys.constants import (
+    USER_ATTRIBUTES_NAME,
+    ITEM_ATTRIBUTES_NAME,
+    SESSION_NAME,
+)
 
 from pdb import set_trace
 
@@ -44,45 +50,49 @@ class Evaluator:
     def __init__(
         self,
         pipeline: BaseScorer,
-        collection: SessionCollection,
+        dataset: SessionDataset,
+        batch_size: int = 32,
     ) -> None:
         """ """
         self.pipeline = pipeline
-        self.collection = collection
+        self.dataset = dataset
+        self.batch_size = batch_size
 
     def evaluate(self, k=20):
         """
         For now we will just evaluate the NDCG, extend in future to take in
         other metrics.
-
-        TODO: Add batching.
         """
         metrics = []
-        for session in self.collection.sessions:
-            scores = self.score_session(session)
-            relevances_reranked = self.rerank(scores, session.relevances)
-            metrics.append(ndcg(relevances_reranked, k=k))
+        for batch in DataLoader(self.dataset, batch_size=self.batch_size):
+            scores: list[list[float]] = self.score_sessions(batch)
+            for i, row in enumerate(batch):
+                row_scores = scores[i]
+                session: Session = row["session"]
+                relevances_reranked = self.rerank(row_scores, session.relevances)
+                metrics.append(ndcg(relevances_reranked, k=k))
+        assert len(metrics) == len(self.dataset)
         return mean_with_se(metrics)
 
-    def score_session(self, session: Session, k=20):
-        item_attributes = (
-            session.items
-            if self.collection.item_loader is None
-            else self.collection.load_items(session.items)
-        )
-        user_attributes = (
-            session.user
-            if self.collection.user_loader is None
-            else self.collection.load_users(session.user)
-        )
-        scores = self.pipeline(
-            {
-                "query": session.query,
-                "user_attributes": user_attributes,
-                "item_attributes": item_attributes,
-            }
-        )
-        return scores
+    def score_sessions(self, session_dicts: list[dict], k=20):
+        """
+        As scorers might be more efficient computing in batch, we try to stack up
+        user and item attributes as much as possible before passing into the
+        `score` method of the scorer.
+        """
+        data = []
+        for d in session_dicts:
+            session: Session = d[SESSION_NAME]
+            item_attributes = self.dataset.load_items(session.items)
+            user_attributes = self.dataset.load_user(session.user)
+            data.append(
+                {
+                    **session.__dict__,
+                    USER_ATTRIBUTES_NAME: user_attributes,
+                    ITEM_ATTRIBUTES_NAME: item_attributes,
+                }
+            )
+        return self.pipeline(data)
 
     def rerank(self, scores: list[float], items: list[object]):
         """

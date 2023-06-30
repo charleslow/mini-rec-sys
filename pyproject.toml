@@ -19,6 +19,7 @@ torch = "<2.0.0"
 faiss-cpu = "^1.7.4"
 pydantic = "^1.10.9"
 diskcache = "^5.6.1"
+pytorch-lightning = "^2.0.4"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.3.2"
