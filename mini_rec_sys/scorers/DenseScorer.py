@@ -7,6 +7,8 @@ from mini_rec_sys.encoders import BaseBertEncoder
 from mini_rec_sys.scorers import BaseScorer
 from mini_rec_sys.utils import batcher
 
+from pdb import set_trace
+
 
 class DenseScorer(BaseScorer):
     """
@@ -50,11 +52,15 @@ class DenseScorer(BaseScorer):
         self.q_encoder.eval()
         self.p_encoder.eval()
 
-        # Encode queries
+        # Handle single row of data
         if isinstance(test_data, list):
             queries = [d[self.query_key] for d in test_data]
+            item_lists = [d[self.test_documents_key] for d in test_data]
         else:
             queries = [test_data[self.query_key]]
+            item_lists = [test_data[self.test_documents_key]]
+
+        # Encode queries
         q_embed = []
         for batch in batcher(queries, self.batch_size):
             q_embed.append(self.q_encode(batch))
@@ -70,11 +76,10 @@ class DenseScorer(BaseScorer):
         hash2idx = {}
         item_texts = []
         idx = 0
-        for d in test_data:
+        for items in item_lists:
             inner_list = []
-            for item_text in [
-                item[self.passage_text_key] for item in d[self.test_documents_key]
-            ]:
+            for item in items:
+                item_text = item[self.passage_text_key]
                 if item_text is None:
                     item_text = ""
                 text_hash = hash(item_text)
@@ -97,4 +102,8 @@ class DenseScorer(BaseScorer):
         for i, idxs in enumerate(idx_list):
             row_scores = S[i, idxs]
             results.append(row_scores.tolist())
-        return results
+
+        if isinstance(test_data, list):
+            return results
+        else:
+            return results[0]

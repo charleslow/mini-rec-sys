@@ -58,7 +58,7 @@ class Evaluator:
         self.dataset = dataset
         self.batch_size = batch_size
 
-    def evaluate(self, k=20):
+    def evaluate(self, k=20, return_raw=False):
         """
         For now we will just evaluate the NDCG, extend in future to take in
         other metrics.
@@ -77,6 +77,8 @@ class Evaluator:
                 relevances_reranked = self.rerank(row_scores, session.relevances)
                 metrics.append(ndcg(relevances_reranked, k=k))
         assert len(metrics) == len(self.dataset)
+        if return_raw:
+            return metrics
         return mean_with_se(metrics)
 
     def score_sessions(self, session_dicts: list[dict], k=20):

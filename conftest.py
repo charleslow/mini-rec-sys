@@ -11,12 +11,12 @@ DEFAULT_DOCUMENTS = {
 
 
 @pytest.fixture
-def default_documents():
+def default_documents() -> dict:
     return DEFAULT_DOCUMENTS
 
 
 @pytest.fixture
-def default_session_data():
+def default_session_data() -> dict:
     n = 50
     data = {}
     for i in range(n):
@@ -29,3 +29,10 @@ def default_session_data():
             query=random.sample(words, k=1)[0],
         )
     return data
+
+
+@pytest.fixture
+def minilm_encoder():
+    from mini_rec_sys.encoders import MiniLmEncoder
+
+    return MiniLmEncoder(dim_embed=384, max_length=20)
