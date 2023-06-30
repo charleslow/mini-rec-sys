@@ -45,26 +45,10 @@ def get_device():
     return device
 
 
-class Batcher:
-    def __init__(self, l, batch_size=128) -> None:
-        self.l = l
-        self.n = len(l)
-        self.batch_size = batch_size
-
-    def batches(self):
-        if self.n <= self.batch_size:
-            yield self.l
-
-        else:
-            start_ptr = 0
-            end_ptr = self.batch_size
-            while end_ptr <= self.n:
-                batch = self.l[start_ptr:end_ptr]
-                yield batch
-                if end_ptr == self.n:
-                    break
-                start_ptr = end_ptr
-                end_ptr = min(self.n, end_ptr + self.batch_size)
+def batcher(iterable, n=1):
+    l = len(iterable)
+    for idx in range(0, l, n):
+        yield iterable[idx : min(idx + n, l)]
 
 
 def clean(text):
