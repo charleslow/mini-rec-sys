@@ -3,7 +3,7 @@ import numpy as np
 import math
 from torch.utils.data import DataLoader
 from mini_rec_sys.scorers import BaseScorer
-from mini_rec_sys.data import Session, SessionDataset
+from mini_rec_sys.data import Session, SessionDataset, BatchedSequentialSampler
 from mini_rec_sys.constants import (
     USER_ATTRIBUTES_NAME,
     ITEM_ATTRIBUTES_NAME,
@@ -64,7 +64,12 @@ class Evaluator:
         other metrics.
         """
         metrics = []
-        for batch in DataLoader(self.dataset, batch_size=self.batch_size):
+        sampler = BatchedSequentialSampler(
+            self.dataset, batch_size=self.batch_size, drop_last=False
+        )
+        for batch in DataLoader(
+            self.dataset, batch_sampler=sampler, collate_fn=lambda x: x
+        ):
             scores: list[list[float]] = self.score_sessions(batch)
             for i, row in enumerate(batch):
                 row_scores = scores[i]
