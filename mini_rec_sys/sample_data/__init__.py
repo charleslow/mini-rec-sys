@@ -1,0 +1,1 @@
+from .msmarco_reranking.generate_data import get_msmarco_sample_data
