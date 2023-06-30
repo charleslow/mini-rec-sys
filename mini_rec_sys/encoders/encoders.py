@@ -54,7 +54,6 @@ class BaseBertEncoder(nn.Module):
         dim_output: int,
         dim_embed: int,
         max_length: int,
-        device: torch.device,
         normalize: bool = True,
     ) -> None:
         """
@@ -63,14 +62,12 @@ class BaseBertEncoder(nn.Module):
         dim_embed: add an additional linear layer to coerce the embedding
             dimension to a desired size.
         max_length: maximum sequence length to embed.
-        device: device that we want the encoder to be on.
         normalize: whether to apply L2 normalization to output layer or not.
         """
         super().__init__()
         self.model_name = model_name
         self.dim_embed = dim_embed
         self.max_length = max_length
-        self.device = device
         self.normalize = normalize
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -81,7 +78,6 @@ class BaseBertEncoder(nn.Module):
             self.linear = nn.Linear(dim_output, dim_embed)
         else:
             self.linear = None
-        self.to(device=device)
 
     def forward(self, texts: List[str]):
         """
@@ -103,7 +99,7 @@ class BaseBertEncoder(nn.Module):
             truncation=True,
             return_tensors="pt",
             max_length=self.max_length,
-        ).to(self.device)
+        )
         return tokens
 
 

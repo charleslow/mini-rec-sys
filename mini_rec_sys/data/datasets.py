@@ -262,7 +262,11 @@ class SessionDataset(Dataset):
         return session.negative_items is not None
 
     def __getitem__(self, id: int | str):
-        session = super().__getitem__(id)
+        return self.load_session_dict(id)
+
+    def load_session_dict(self, id: int | str):
+        session: Session = self.load(id)
+
         if session is None:
             return None
 
@@ -279,9 +283,6 @@ class SessionDataset(Dataset):
             USER_ATTRIBUTES_NAME: user_attributes,
             ITEM_ATTRIBUTES_NAME: item_attributes,
         }
-
-    def load(self, id: int | str):
-        return self.__getitem__(id)
 
     def load_item(self, item_id: int | str):
         res = {"item_id": item_id}
