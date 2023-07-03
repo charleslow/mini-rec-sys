@@ -10,6 +10,7 @@ from mini_rec_sys.trainers.base_trainers import BaseModel
 from mini_rec_sys.encoders import BaseBertEncoder
 from mini_rec_sys.scorers import DenseScorer
 from mini_rec_sys.evaluators import Evaluator
+from mini_rec_sys.constants import ITEM_ATTRIBUTES_NAME
 
 import torch
 import torch.nn.functional as F
@@ -43,6 +44,7 @@ class DPRModel(BaseModel):
         val_dataset: SessionDataset = None,
         val_batch_size: int = 32,
         validation_method: str = "default",
+        validation_k: int = 20,
     ) -> None:
         super().__init__(
             train_dataset=train_dataset,
@@ -59,26 +61,48 @@ class DPRModel(BaseModel):
         self.p_encoder = p_encoder
         assert validation_method in ["default", "rerank"]
         self.validation_method = validation_method
+        self.validation_k = validation_k
 
     def forward(self, batch: list[dict]):
         triplets = self.load_triplets(batch)
         S = self.compute_S(triplets)
         return self.compute_loss(S)
 
+    def get_random_item_with_attrs(self, items: list[str]):
+        random.shuffle(items)
+        item_attrs = None
+        while len(items) > 0:
+            item = items.pop()
+            item_attrs = self.train_dataset.load_item(item)
+            if item_attrs is None:
+                continue
+        return item_attrs
+
     def load_triplets(self, batch: list[dict]):
         triplets = []
         for d in batch:
             session: Session = d["session"]
-            positive_item = random.sample(session.positive_items, k=1)[0]
-            if self.train_dataset.has_negative_items:
-                negative_item = random.sample(session.negative_items, k=1)[0]
-            triplets.append(
-                (
-                    getattr(session, self.query_key),
-                    self.train_dataset.load_item(positive_item)[self.item_text_key],
-                    self.train_dataset.load_item(negative_item)[self.item_text_key],
-                )
+
+            # Add positive items
+            positive_item_attrs = self.get_random_item_with_attrs(
+                session.positive_items
             )
+            if positive_item_attrs is None:
+                continue
+            row = [
+                getattr(session, self.query_key),
+                positive_item_attrs[self.item_text_key],
+            ]
+
+            # Add negative item if it exists
+            if self.train_dataset.has_negative_items:
+                negative_item_attrs = self.get_random_item_with_attrs(
+                    session.negative_items
+                )
+                if negative_item_attrs is None:
+                    continue
+                row.append(negative_item_attrs[self.item_text_key])
+            triplets.append(row)
         return triplets
 
     def compute_S(self, triplets: list[tuple]):
@@ -117,20 +141,24 @@ class DPRModel(BaseModel):
         """
         return -F.log_softmax(S, dim=1).trace() / len(S)
 
-    def validation_step(self, batch: list[dict], batch_idx):
+    def validation_step(self, batch: list[dict], batch_idx: int):
         if self.validation_method == "default":
             return super().validation_step(batch, batch_idx)
         elif self.validation_method == "rerank":
             return self.rerank_validation(batch, batch_idx)
 
-    def rerank_validation(self, batch: list[dict], batch_idx):
+    def rerank_validation(self, batch: list[dict], batch_idx: int):
         # Use a DenseScorer to rerank and submit ndcg
         scorer = DenseScorer(
             query_key=self.query_key,
-            test_documents_key="item_attributes",
+            test_documents_key=ITEM_ATTRIBUTES_NAME,
             passage_text_key=self.item_text_key,
             q_encoder=self.q_encoder,
             p_encoder=self.p_encoder,
             batch_size=self.val_batch_size,
         )
-        Evaluator()
+        ndcg, se = Evaluator(scorer).evaluate_batch(
+            batch, k=self.validation_k, return_raw=False
+        )
+        self.log("val_ndcg", ndcg, prog_bar=True, batch_size=len(batch))
+        return ndcg

@@ -62,7 +62,14 @@ class BaseModel(pl.LightningModule):
         return loss
 
 
-def train(model: BaseModel, **kwargs):
+def train(
+    model: BaseModel,
+    max_epochs: int = 20,
+    limit_train_batches: int = 100,
+    limit_val_batches: int = 20,
+    log_every_n_steps: int = 50,
+    **kwargs
+):
     """
     Additional arguments / keyword arguments are passed into pl.Trainer.
     """
@@ -81,7 +88,13 @@ def train(model: BaseModel, **kwargs):
     else:
         val_loader = None
 
-    trainer = pl.Trainer(**kwargs)
+    trainer = pl.Trainer(
+        max_epochs=max_epochs,
+        limit_train_batches=limit_train_batches,
+        limit_val_batches=limit_val_batches,
+        log_every_n_steps=log_every_n_steps,
+        **kwargs
+    )
     trainer.fit(
         model=model,
         train_dataloaders=train_loader,

@@ -20,6 +20,7 @@ faiss-cpu = "^1.7.4"
 pydantic = "^1.10.9"
 diskcache = "^5.6.1"
 pytorch-lightning = "^2.0.4"
+fastparquet = "^2023.4.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.3.2"

@@ -75,7 +75,7 @@ class Dataset(torch.utils.data.Dataset):
         else:
             self.cache = Cache(db_location)
             print(
-                f"Loading / initializing database with {len(self)} entries at {db_location}.."
+                f"Loading / initializing database with {len(self):,} entries at {db_location}.."
             )
 
     def get_files_from_path(self, path: str, suffix="parquet"):
@@ -120,7 +120,9 @@ class Dataset(torch.utils.data.Dataset):
             cache = Cache(self.db_location)
 
         for id, row in tqdm(generator):
-            cache[id] = self.store_fn(id, row)
+            res = self.store_fn(id, row)
+            if res:
+                cache[id] = res
 
         if self.db_location and self.db_location.startswith("dbfs:/"):
             directory = cache.directory
@@ -138,9 +140,9 @@ class Dataset(torch.utils.data.Dataset):
     def parquet_row_generator(self, files):
         for path in files:
             df = pd.read_parquet(path)
-            for _, row in df.iterrows():
-                id = row.pop(self.id_name)
-                yield id, row
+            for row_dict in df.to_dict(orient="records"):
+                id = row_dict[self.id_name]
+                yield id, row_dict
 
     def load_object(self, id: int | str):
         """
@@ -183,6 +185,10 @@ class Dataset(torch.utils.data.Dataset):
             return iter(self.subset_ids)
         else:
             return self.cache.iterkeys()
+
+    def peek(self):
+        key, res = next(iter(self))
+        return {key: res}
 
 
 # For UserDataset and ItemDataset, we just enforce that the load_fn must load
@@ -279,6 +285,7 @@ class SessionDataset(Dataset):
             session.user if self.user_dataset is None else self.load_users(session.user)
         )
         return {
+            **session.__dict__,
             SESSION_NAME: session,
             USER_ATTRIBUTES_NAME: user_attributes,
             ITEM_ATTRIBUTES_NAME: item_attributes,
