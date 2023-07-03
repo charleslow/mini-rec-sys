@@ -162,5 +162,8 @@ cython_debug/
 
 lightning_logs/
 mysf_raw_data/*
+mcf_raw_data/*
 diskcache/*
 test.py
+test_mysf.py
+test_mcf.py

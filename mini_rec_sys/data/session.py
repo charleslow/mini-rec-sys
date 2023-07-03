@@ -26,6 +26,7 @@ class Session:
         None,
         description="Items that are deemed irrelevant in this session, e.g. implicit negatives based on impressions or explicit negatives",
     )
+    session_weight: Optional[int | float] = Field(None, description="Weight of session")
 
     @validator("positive_relevances")
     def at_least_one_relevance(cls, relevances):

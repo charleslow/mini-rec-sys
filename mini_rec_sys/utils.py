@@ -5,6 +5,7 @@ import pandas as pd
 import re
 import lxml.html
 import lxml.html.clean
+import itertools
 from pdb import set_trace
 
 
@@ -88,3 +89,7 @@ def convert_none_to_empty_string(string):
     if string is None:
         return ""
     return string
+
+
+def flatten_list(l: list[list]):
+    return list(itertools.chain.from_iterable(l))

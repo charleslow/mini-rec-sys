@@ -10,7 +10,7 @@ from mini_rec_sys.trainers.base_trainers import BaseModel
 from mini_rec_sys.encoders import BaseBertEncoder
 from mini_rec_sys.scorers import DenseScorer
 from mini_rec_sys.evaluators import Evaluator
-from mini_rec_sys.constants import ITEM_ATTRIBUTES_NAME
+from mini_rec_sys.constants import ITEM_ATTRIBUTES_NAME, VAL_METRIC_NAME
 
 import torch
 import torch.nn.functional as F
@@ -45,6 +45,10 @@ class DPRModel(BaseModel):
         val_batch_size: int = 32,
         validation_method: str = "default",
         validation_k: int = 20,
+        test_dataset: SessionDataset = None,
+        test_batch_size: int = 32,
+        test_method: str = "default",
+        test_k: int = 20,
     ) -> None:
         super().__init__(
             train_dataset=train_dataset,
@@ -54,6 +58,8 @@ class DPRModel(BaseModel):
             learning_rate=learning_rate,
             val_dataset=val_dataset,
             val_batch_size=val_batch_size,
+            test_dataset=test_dataset,
+            test_batch_size=test_batch_size,
         )
         self.query_key = query_key
         self.item_text_key = item_text_key
@@ -62,6 +68,9 @@ class DPRModel(BaseModel):
         assert validation_method in ["default", "rerank"]
         self.validation_method = validation_method
         self.validation_k = validation_k
+        assert test_method in ["default", "rerank"]
+        self.test_method = test_method
+        self.test_k = test_k
 
     def forward(self, batch: list[dict]):
         triplets = self.load_triplets(batch)
@@ -71,12 +80,17 @@ class DPRModel(BaseModel):
     def get_random_item_with_attrs(self, items: list[str]):
         random.shuffle(items)
         item_attrs = None
+        item_text = None
         while len(items) > 0:
             item = items.pop()
             item_attrs = self.train_dataset.load_item(item)
             if item_attrs is None:
                 continue
-        return item_attrs
+            item_text = item_attrs.get(self.item_text_key, None)
+            if item_text is None:
+                continue
+            break
+        return item_text
 
     def load_triplets(self, batch: list[dict]):
         triplets = []
@@ -84,24 +98,26 @@ class DPRModel(BaseModel):
             session: Session = d["session"]
 
             # Add positive items
-            positive_item_attrs = self.get_random_item_with_attrs(
-                session.positive_items
-            )
-            if positive_item_attrs is None:
+            if (
+                positive_item_text := self.get_random_item_with_attrs(
+                    session.positive_items
+                )
+            ) is None:
                 continue
             row = [
                 getattr(session, self.query_key),
-                positive_item_attrs[self.item_text_key],
+                positive_item_text,
             ]
 
             # Add negative item if it exists
             if self.train_dataset.has_negative_items:
-                negative_item_attrs = self.get_random_item_with_attrs(
-                    session.negative_items
-                )
-                if negative_item_attrs is None:
+                if (
+                    negative_item_text := self.get_random_item_with_attrs(
+                        session.negative_items
+                    )
+                ) is None:
                     continue
-                row.append(negative_item_attrs[self.item_text_key])
+                row.append(negative_item_text)
             triplets.append(row)
         return triplets
 
@@ -112,9 +128,6 @@ class DPRModel(BaseModel):
         - Positive text
         - Negative text (optional)
         """
-        # Check if negative samples are provided
-        negative_sampling = len(triplets[0]) == 3
-
         # Encode queries
         queries = [trip[0] for trip in triplets]
         Q = self.q_encoder(queries)
@@ -124,7 +137,7 @@ class DPRModel(BaseModel):
         P = self.p_encoder(positive_texts)
 
         # Encode negative job samples
-        if negative_sampling:
+        if self.train_dataset.has_negative_items:
             negative_texts = [trip[2] for trip in triplets]
             P2 = self.p_encoder(negative_texts)
             P = torch.vstack([P, P2])  # 2*n_batch x embed_dim
@@ -160,5 +173,26 @@ class DPRModel(BaseModel):
         ndcg, se = Evaluator(scorer).evaluate_batch(
             batch, k=self.validation_k, return_raw=False
         )
-        self.log("val_ndcg", ndcg, prog_bar=True, batch_size=len(batch))
+        self.log(VAL_METRIC_NAME, ndcg, prog_bar=True, batch_size=len(batch))
         return ndcg
+
+    def test_step(self, batch: list[dict], batch_idx: int):
+        if self.test_method == "default":
+            return super().test_step(batch, batch_idx)
+        elif self.test_method == "rerank":
+            return self.rerank_test(batch, batch_idx)
+
+    def rerank_test(self, batch: list[dict], batch_idx: int):
+        # Use a DenseScorer to rerank and submit ndcg
+        scorer = DenseScorer(
+            query_key=self.query_key,
+            test_documents_key=ITEM_ATTRIBUTES_NAME,
+            passage_text_key=self.item_text_key,
+            q_encoder=self.q_encoder,
+            p_encoder=self.p_encoder,
+            batch_size=self.val_batch_size,
+        )
+        metrics = Evaluator(scorer).evaluate_batch(
+            batch, k=self.test_k, return_raw=True
+        )
+        self.test_metrics.extend(metrics)

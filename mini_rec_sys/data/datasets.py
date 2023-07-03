@@ -120,7 +120,12 @@ class Dataset(torch.utils.data.Dataset):
             cache = Cache(self.db_location)
 
         for id, row in tqdm(generator):
-            res = self.store_fn(id, row)
+            try:
+                res = self.store_fn(id, row)
+            except Exception as e:
+                raise ValueError(
+                    f"Failed to store id: {id} with data: {self.summarize_row(row)}."
+                )
             if res:
                 cache[id] = res
 
@@ -141,8 +146,23 @@ class Dataset(torch.utils.data.Dataset):
         for path in files:
             df = pd.read_parquet(path)
             for row_dict in df.to_dict(orient="records"):
-                id = row_dict[self.id_name]
+                try:
+                    id = row_dict[self.id_name]
+                except Exception as e:
+                    raise ValueError(
+                        f"Failed to parse correctly, the row of data loaded was {self.summarize_row(row_dict)}."
+                    )
                 yield id, row_dict
+
+    def summarize_row(self, row_dict: dict):
+        res = {}
+        for k, v in row_dict.items():
+            if isinstance(v, list):
+                v = v[:5]
+            if isinstance(v, str):
+                v = v[:50]
+            res[k] = v
+        return res
 
     def load_object(self, id: int | str):
         """
