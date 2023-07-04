@@ -117,7 +117,7 @@ class Dataset(torch.utils.data.Dataset):
             print("Initializing cache in temp location..")
             cache = Cache(size_limit=MAX_DISK_SIZE, cull_limit=0)
             self.db_location = cache.directory
-        elif self.db_location.startswith("dbfs:/"):
+        elif self.db_location.startswith("/dbfs"):
             print("On databricks, writing to temp location..")
             cache = Cache(size_limit=MAX_DISK_SIZE, cull_limit=0)
         else:
