@@ -2,6 +2,8 @@ from mini_rec_sys.data import Session
 import pytest
 from pydantic.dataclasses import ValidationError
 
+from pdb import set_trace
+
 
 class TestSession:
     def test_valid_session_does_not_raise_error(self):

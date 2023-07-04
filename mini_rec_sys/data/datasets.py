@@ -14,6 +14,8 @@ from mini_rec_sys.constants import (
 )
 from pdb import set_trace
 
+MAX_DISK_SIZE = int(1e10)
+
 
 class Dataset(torch.utils.data.Dataset):
     """
@@ -73,7 +75,7 @@ class Dataset(torch.utils.data.Dataset):
             print(f"Populating database..")
             self.cache = self.populate_db(data)
         else:
-            self.cache = Cache(db_location)
+            self.cache = Cache(db_location, size_limit=MAX_DISK_SIZE, cull_limit=0)
             print(
                 f"Loading / initializing database with {len(self):,} entries at {db_location}.."
             )
@@ -111,13 +113,13 @@ class Dataset(torch.utils.data.Dataset):
 
         if self.db_location is None:
             print("Initializing cache in temp location..")
-            cache = Cache()
+            cache = Cache(size_limit=MAX_DISK_SIZE, cull_limit=0)
             self.db_location = cache.directory
         elif self.db_location.startswith("dbfs:/"):
             print("On databricks, writing to temp location..")
-            cache = Cache()
+            cache = Cache(size_limit=MAX_DISK_SIZE, cull_limit=0)
         else:
-            cache = Cache(self.db_location)
+            cache = Cache(self.db_location, size_limit=MAX_DISK_SIZE, cull_limit=0)
 
         for id, row in tqdm(generator):
             try:
@@ -132,7 +134,7 @@ class Dataset(torch.utils.data.Dataset):
         if self.db_location and self.db_location.startswith("dbfs:/"):
             directory = cache.directory
             copytree(directory, self.db_location)
-            cache = Cache(self.db_location)
+            cache = Cache(self.db_location, size_limit=MAX_DISK_SIZE, cull_limit=0)
         return cache
 
     def json_row_generator(self, files):

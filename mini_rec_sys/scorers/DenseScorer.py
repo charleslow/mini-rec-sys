@@ -55,10 +55,10 @@ class DenseScorer(BaseScorer):
         # Handle single row of data
         if isinstance(test_data, list):
             queries = [d[self.query_key] for d in test_data]
-            item_lists = [d[self.test_documents_key] for d in test_data]
+            item_lists: list[dict] = [d[self.test_documents_key] for d in test_data]
         else:
             queries = [test_data[self.query_key]]
-            item_lists = [test_data[self.test_documents_key]]
+            item_lists: list[dict] = [test_data[self.test_documents_key]]
 
         # Encode queries
         q_embed = []
@@ -79,7 +79,7 @@ class DenseScorer(BaseScorer):
         for items in item_lists:
             inner_list = []
             for item in items:
-                item_text = item[self.passage_text_key]
+                item_text = item.get(self.passage_text_key, None)
                 if item_text is None:
                     item_text = ""
                 text_hash = hash(item_text)

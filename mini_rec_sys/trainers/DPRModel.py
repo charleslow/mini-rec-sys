@@ -15,6 +15,7 @@ from mini_rec_sys.constants import (
     VAL_METRIC_NAME,
     TEST_METRIC_NAME,
 )
+from mini_rec_sys.utils import shuffle, WeightedSampler
 
 import torch
 import torch.nn.functional as F
@@ -45,6 +46,7 @@ class DPRModel(BaseModel):
         model_params: dict = None,
         optimizer_class: Optimizer = Adam,
         learning_rate: float = 1e-5,
+        check_for_conflict: bool = True,
         val_dataset: SessionDataset = None,
         val_batch_size: int = 32,
         val_method: str = "default",
@@ -71,6 +73,7 @@ class DPRModel(BaseModel):
         self.item_text_key = item_text_key
         self.q_encoder = q_encoder
         self.p_encoder = p_encoder
+        self.check_for_conflict = check_for_conflict
         assert val_method in ["default", "rerank"]
         self.val_method = val_method
         self.val_k = val_k
@@ -84,48 +87,103 @@ class DPRModel(BaseModel):
         S = self.compute_S(triplets)
         return self.compute_loss(S)
 
-    def get_random_item_with_attrs(self, items: list[str]):
-        random.shuffle(items)
-        item_attrs = None
-        item_text = None
-        while len(items) > 0:
-            item = items.pop()
-            item_attrs = self.train_dataset.load_item(item)
-            if item_attrs is None:
-                continue
-            item_text = item_attrs.get(self.item_text_key, None)
-            if item_text is None:
-                continue
-            break
-        return item_text
-
     def load_triplets(self, batch: list[dict]):
+        """
+        From the mini batch, sample a triplet of (query, positive_text, negative_text)
+        1. For each query, sample a positive passage
+        2. (Optional) For each query, sample a negative passage
+
+        Return as:
+            a list[tuple] of (query, positive_passage, negative_passage)
+            or a list[tuple] of (query, positive_passage).
+        """
         triplets = []
+        queries = set()
+        already_sampled_items = set()
+
         for d in batch:
             session: Session = d["session"]
 
-            # Add positive items
-            if (
-                positive_item_text := self.get_random_item_with_attrs(
-                    session.positive_items
-                )
-            ) is None:
+            if session.query in queries:
                 continue
-            row = [
-                getattr(session, self.query_key),
-                positive_item_text,
-            ]
+            queries.add(session.query)
 
-            # Add negative item if it exists
-            if self.train_dataset.has_negative_items:
-                if (
-                    negative_item_text := self.get_random_item_with_attrs(
-                        session.negative_items
-                    )
-                ) is None:
+            # Sample positive item, ensuring that it has not appeared as a
+            # positive or negative item before in the batch
+            FLAG_POSITIVE = False
+            positive_weights = (
+                [1] * len(session.positive_items)
+                if not session.positive_weights
+                else session.positive_weights
+            )
+            positive_sampler = WeightedSampler(
+                {
+                    item: weight
+                    for item, weight in zip(session.positive_items, positive_weights)
+                },
+                pop=True,
+            )
+            while len(positive_sampler) > 0:
+                positive_item = positive_sampler.sample()
+                if self.check_for_conflict and (positive_item in already_sampled_items):
                     continue
-                row.append(negative_item_text)
-            triplets.append(row)
+                positive_text = self.train_dataset.load_item(positive_item).get(
+                    self.item_text_key, None
+                )
+                if positive_text is not None:
+                    FLAG_POSITIVE = True
+                    break
+
+            if not FLAG_POSITIVE:
+                continue
+
+            # Keep track of positive items for queries in the batch
+            for item in session.positive_items:
+                already_sampled_items.add(item)
+
+            if not self.train_dataset.has_negative_items:
+                triplets.append(
+                    (
+                        getattr(session, self.query_key),
+                        positive_text,
+                    )
+                )
+                continue
+
+            # Sample negative item, ensuring that it has not appeared as a
+            # positive or negative item before in the batch
+            FLAG_NEGATIVE = False
+            negative_weights = (
+                [1] * len(session.negative_items)
+                if not session.negative_items
+                else session.negative_weights
+            )
+            negative_sampler = WeightedSampler(
+                {
+                    item: weight
+                    for item, weight in zip(session.negative_items, negative_weights)
+                },
+                pop=True,
+            )
+            while len(negative_sampler) > 0:
+                negative_item = negative_sampler.sample()
+                if self.check_for_conflict and (negative_item in already_sampled_items):
+                    continue
+                negative_text = self.train_dataset.load_item(negative_item).get(
+                    self.item_text_key, None
+                )
+                if negative_text is not None:
+                    FLAG_NEGATIVE = True
+                    already_sampled_items.add(negative_item)
+                    break
+
+            if not FLAG_NEGATIVE:
+                continue
+
+            triplets.append(
+                (getattr(session, self.query_key), positive_text, negative_text)
+            )
+
         return triplets
 
     def compute_S(self, triplets: list[tuple]):

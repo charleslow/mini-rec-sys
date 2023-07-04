@@ -13,6 +13,7 @@ from mini_rec_sys.constants import (
     TEST_SE_NAME,
     TEST_N_NAME,
 )
+from pdb import set_trace
 
 
 class BaseModel(pl.LightningModule):
@@ -160,7 +161,7 @@ def train(
         train_dataloaders=train_loader,
         val_dataloaders=val_loader,
     )
-    if test_loader:
+    if test_loader is not None:
         trainer.test(
             dataloaders=test_loader,
             ckpt_path="best",

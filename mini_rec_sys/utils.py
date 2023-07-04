@@ -6,6 +6,7 @@ import re
 import lxml.html
 import lxml.html.clean
 import itertools
+import random
 from pdb import set_trace
 
 
@@ -93,3 +94,49 @@ def convert_none_to_empty_string(string):
 
 def flatten_list(l: list[list]):
     return list(itertools.chain.from_iterable(l))
+
+
+def shuffle(l: list):
+    return random.shuffle(l, len(l))
+
+
+import random
+
+
+class Sampler:
+    def sample(self):
+        raise NotImplementedError()
+
+
+class WeightedSampler:
+    """
+    Class to sample from a dictionary with sample weights.
+    """
+
+    def __init__(self, sample_dict: dict, pop=False) -> None:
+        """
+        sample_dict: dictionary of item to sample probability.
+        pop: Whether we should pop an item after we sample it
+        """
+        self.items = []
+        self.probs = []
+        for k, v in sample_dict.items():
+            if v > 0.0:
+                self.items.append(k)
+                self.probs.append(v)
+        self.pop = pop
+
+    def sample(self):
+        """
+        Return a sample based sample probabilities.
+        """
+        n = len(self.items)
+        idx = random.choices(range(n), self.probs, k=1)[0]
+        selected = self.items[idx]
+        if self.pop:
+            self.items.pop(idx)
+            self.probs.pop(idx)
+        return selected
+
+    def __len__(self):
+        return len(self.items)
