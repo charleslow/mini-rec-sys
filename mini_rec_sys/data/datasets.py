@@ -1,3 +1,4 @@
+from __future__ import annotations
 from diskcache import Cache
 from pathlib import Path
 from tqdm import tqdm

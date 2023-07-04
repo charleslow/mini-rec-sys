@@ -1,6 +1,7 @@
+from __future__ import annotations
 from pydantic import Field, validator
 from pydantic.dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Union
 
 
 @dataclass
@@ -12,29 +13,31 @@ class Session:
     - A triplet of (query, positive_item, negative_item)
     """
 
-    session_id: int | str
-    positive_items: list[int | str] = Field(
+    session_id: Union[int, str]
+    positive_items: list[Union[int, str]] = Field(
         ...,
         description="Items that received a positive relevance signal in this session.",
     )
-    positive_relevances: list[int | float] = Field(
+    positive_relevances: list[Union[int, float]] = Field(
         ..., description="The relevance scores for each of the `positive_items`."
     )
-    positive_weights: Optional[list[int | float]] = Field(
+    positive_weights: Optional[list[Union[int, float]]] = Field(
         None,
         description="The weight of each of the `positive_items`, e.g. occurrence probability",
     )
-    user: Optional[int | str] = None
+    user: Optional[Union[int, str]] = None
     query: Optional[str] = None
-    negative_items: Optional[list[int | str]] = Field(
+    negative_items: Optional[list[Union[int, str]]] = Field(
         None,
         description="Items that are deemed irrelevant in this session, e.g. implicit negatives based on impressions or explicit negatives",
     )
-    negative_weights: Optional[list[int | float]] = Field(
+    negative_weights: Optional[list[Union[int, float]]] = Field(
         None,
         description="The weight of each of the `negative_items`, e.g. occurrence probability",
     )
-    session_weight: Optional[int | float] = Field(None, description="Weight of session")
+    session_weight: Optional[Union[int, float]] = Field(
+        None, description="Weight of session"
+    )
 
     @validator("positive_relevances")
     def at_least_one_relevance(cls, relevances):

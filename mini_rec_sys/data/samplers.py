@@ -1,6 +1,7 @@
 """
 Besides the default samplers, one can also subclass Sampler and define custom sampling logic.
 """
+from __future__ import annotations
 from typing import Optional, Sized
 import torch
 import random

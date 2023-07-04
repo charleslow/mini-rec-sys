@@ -1,8 +1,10 @@
+from __future__ import annotations
 import math
 import re
 import numpy as np
 from collections import Counter
 from mini_rec_sys.scorers import BaseScorer
+from typing import Union
 from pdb import set_trace
 
 STOP_WORDS = [
@@ -66,7 +68,7 @@ class BM25Scorer(BaseScorer):
         self.field_doclens = {field: 0.0 for field in fields}
         self.train(train_documents)
 
-    def score(self, input_data: dict | list[dict]):
+    def score(self, input_data: Union[dict, list[dict]]):
         if input_data is None:
             return None
         if isinstance(input_data, dict):

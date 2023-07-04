@@ -2,6 +2,7 @@
 Module for training a query and passage encoder based on Karpukhin 2020 -
 Dense Passage Retrieval for Open-Domain Question Answering.
 """
+from __future__ import annotations
 from torch.optim import Optimizer, Adam
 import random
 

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Wrappers around various transformer models to define a consistent interface
 for encoding texts and using for search.

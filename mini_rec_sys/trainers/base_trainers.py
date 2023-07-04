@@ -1,8 +1,10 @@
+from __future__ import annotations
 from torch.optim import Optimizer, Adam
 from torch.utils.data import DataLoader, Sampler
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 import numpy as np
+from typing import Union
 
 from mini_rec_sys.data import Session, SessionDataset, BatchedSequentialSampler
 from mini_rec_sys.evaluators import mean_with_se
@@ -105,10 +107,10 @@ def train(
     limit_val_batches: int = 20,
     log_every_n_steps: int = 50,
     limit_test_batches: int = 20,
-    precision: int | str = 32,
+    precision: Union[int, str] = 32,
     checkpoint_metric: str = None,
     checkpoint_behaviour: str = "min",
-    **kwargs
+    **kwargs,
 ):
     """
     Additional arguments / keyword arguments are passed into pl.Trainer.
@@ -154,7 +156,7 @@ def train(
         limit_test_batches=limit_test_batches,
         precision=precision,
         callbacks=callbacks,
-        **kwargs
+        **kwargs,
     )
     trainer.fit(
         model=model,
