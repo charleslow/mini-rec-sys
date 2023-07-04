@@ -10,7 +10,11 @@ from mini_rec_sys.trainers.base_trainers import BaseModel
 from mini_rec_sys.encoders import BaseBertEncoder
 from mini_rec_sys.scorers import DenseScorer
 from mini_rec_sys.evaluators import Evaluator
-from mini_rec_sys.constants import ITEM_ATTRIBUTES_NAME, VAL_METRIC_NAME
+from mini_rec_sys.constants import (
+    ITEM_ATTRIBUTES_NAME,
+    VAL_METRIC_NAME,
+    TEST_METRIC_NAME,
+)
 
 import torch
 import torch.nn.functional as F
@@ -43,12 +47,14 @@ class DPRModel(BaseModel):
         learning_rate: float = 1e-5,
         val_dataset: SessionDataset = None,
         val_batch_size: int = 32,
-        validation_method: str = "default",
-        validation_k: int = 20,
+        val_method: str = "default",
+        val_k: int = 20,
+        val_metric_name: str = VAL_METRIC_NAME,
         test_dataset: SessionDataset = None,
         test_batch_size: int = 32,
         test_method: str = "default",
         test_k: int = 20,
+        test_metric_name: str = TEST_METRIC_NAME,
     ) -> None:
         super().__init__(
             train_dataset=train_dataset,
@@ -65,9 +71,10 @@ class DPRModel(BaseModel):
         self.item_text_key = item_text_key
         self.q_encoder = q_encoder
         self.p_encoder = p_encoder
-        assert validation_method in ["default", "rerank"]
-        self.validation_method = validation_method
-        self.validation_k = validation_k
+        assert val_method in ["default", "rerank"]
+        self.val_method = val_method
+        self.val_k = val_k
+        self.val_metric_name = val_metric_name
         assert test_method in ["default", "rerank"]
         self.test_method = test_method
         self.test_k = test_k
@@ -155,9 +162,9 @@ class DPRModel(BaseModel):
         return -F.log_softmax(S, dim=1).trace() / len(S)
 
     def validation_step(self, batch: list[dict], batch_idx: int):
-        if self.validation_method == "default":
+        if self.val_method == "default":
             return super().validation_step(batch, batch_idx)
-        elif self.validation_method == "rerank":
+        elif self.val_method == "rerank":
             return self.rerank_validation(batch, batch_idx)
 
     def rerank_validation(self, batch: list[dict], batch_idx: int):
@@ -171,9 +178,9 @@ class DPRModel(BaseModel):
             batch_size=self.val_batch_size,
         )
         ndcg, se = Evaluator(scorer).evaluate_batch(
-            batch, k=self.validation_k, return_raw=False
+            batch, k=self.val_k, return_raw=False
         )
-        self.log(VAL_METRIC_NAME, ndcg, prog_bar=True, batch_size=len(batch))
+        self.log(self.val_metric_name, ndcg, prog_bar=True, batch_size=len(batch))
         return ndcg
 
     def test_step(self, batch: list[dict], batch_idx: int):
@@ -190,7 +197,7 @@ class DPRModel(BaseModel):
             passage_text_key=self.item_text_key,
             q_encoder=self.q_encoder,
             p_encoder=self.p_encoder,
-            batch_size=self.val_batch_size,
+            batch_size=self.test_batch_size,
         )
         metrics = Evaluator(scorer).evaluate_batch(
             batch, k=self.test_k, return_raw=True

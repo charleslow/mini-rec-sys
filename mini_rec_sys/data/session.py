@@ -20,11 +20,19 @@ class Session:
     positive_relevances: list[int | float] = Field(
         ..., description="The relevance scores for each of the `positive_items`."
     )
+    positive_weights: Optional[list[int | float]] = Field(
+        None,
+        description="The weight of each of the `positive_items`, e.g. occurrence probability",
+    )
     user: Optional[int | str] = None
     query: Optional[str] = None
     negative_items: Optional[list[int | str]] = Field(
         None,
         description="Items that are deemed irrelevant in this session, e.g. implicit negatives based on impressions or explicit negatives",
+    )
+    negative_weights: Optional[list[int | float]] = Field(
+        None,
+        description="The weight of each of the `negative_items`, e.g. occurrence probability",
     )
     session_weight: Optional[int | float] = Field(None, description="Weight of session")
 

@@ -47,7 +47,7 @@ class TestEvaluator:
 
         for scorer in [bm25_scorer, dense_scorer]:
             evaluator = Evaluator(pipeline=scorer, dataset=dataset)
-            scores = evaluator.score_sessions([dataset.load_session_dict("session_1")])
+            scores = scorer([dataset.load_session_dict("session_1")])
             assert len(scores) == 1
             ndcg, se = evaluator.evaluate()
             assert ndcg == 1.0

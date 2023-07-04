@@ -38,4 +38,9 @@ def test_dpr_model(default_documents, default_session_data, capsys):
         val_dataset=val_dataset,
         val_batch_size=5,
     )
-    train(model, max_epochs=1)
+    train(
+        model,
+        max_epochs=1,
+        limit_train_batches=2,
+        limit_val_batches=2,
+    )

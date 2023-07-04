@@ -160,7 +160,8 @@ def train(
         train_dataloaders=train_loader,
         val_dataloaders=val_loader,
     )
-    trainer.test(
-        dataloaders=test_loader,
-        ckpt_path="best",
-    )
+    if test_loader:
+        trainer.test(
+            dataloaders=test_loader,
+            ckpt_path="best",
+        )
