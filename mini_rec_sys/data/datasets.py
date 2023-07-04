@@ -5,6 +5,7 @@ from tqdm import tqdm
 import pandas as pd
 import json
 from shutil import copytree
+from typing import Union
 import torch
 
 from mini_rec_sys.data.session import Session
@@ -32,7 +33,7 @@ class Dataset(torch.utils.data.Dataset):
         load_fn: callable = None,
         store_fn: callable = None,
         data: dict | str = None,
-        subset_ids: list[int | str] = None,
+        subset_ids: list[Union[int, str]] = None,
     ) -> None:
         """Initialize the Loader.
 
@@ -132,7 +133,7 @@ class Dataset(torch.utils.data.Dataset):
             if res:
                 cache[id] = res
 
-        if self.db_location and self.db_location.startswith("dbfs:/"):
+        if self.db_location and self.db_location.startswith("/dbfs"):
             directory = cache.directory
             copytree(directory, self.db_location)
             cache = Cache(self.db_location, size_limit=MAX_DISK_SIZE, cull_limit=0)
