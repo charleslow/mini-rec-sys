@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mini-rec-sys"
-version = "0.1.0"
+version = "0.1.1"
 description = "Toolkit to train and evaluate models for search and recommendations."
 authors = ["Charles Low <charleslow88@gmail.com>"]
 license = "MIT"
