@@ -164,7 +164,7 @@ def train(
         limit_test_batches=limit_test_batches,
         precision=precision,
         callbacks=callbacks,
-        **kwargs,
+        default_root_dir=default_root_dir**kwargs,
     )
     trainer.fit(
         model=model,
