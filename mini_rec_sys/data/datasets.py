@@ -34,6 +34,7 @@ class Dataset(torch.utils.data.Dataset):
         store_fn: callable = None,
         data: dict | str = None,
         subset_ids: list[Union[int, str]] = None,
+        write_to_temp: bool = False,
     ) -> None:
         """Initialize the Loader.
 
@@ -53,12 +54,17 @@ class Dataset(torch.utils.data.Dataset):
             if dict, assumes that the key is the id and values are the attributes.
         subset_ids: Whether to limit this dataset to only a subset of keys as
             specified in the list of subset_ids.
+        write_to_temp: whether to write to a temp location first before copying
+            the cache over to the specified db_location. This is useful for e.g.
+            when trying to write to dbfs on databricks, since random writes
+            to dbfs is not allowed.
         """
         assert not (
             data is None and db_location is None
         ), "Must provide db_location and/or data."
         self.db_location = db_location
         self.id_name = id_name
+        self.write_to_temp = write_to_temp
 
         if load_fn is None:
             load_fn = lambda x: x
@@ -117,8 +123,8 @@ class Dataset(torch.utils.data.Dataset):
             print("Initializing cache in temp location..")
             cache = Cache(size_limit=MAX_DISK_SIZE, cull_limit=0)
             self.db_location = cache.directory
-        elif self.db_location.startswith("/dbfs"):
-            print("On databricks, writing to temp location..")
+        elif self.write_to_temp:
+            print("Writing to temp location..")
             cache = Cache(size_limit=MAX_DISK_SIZE, cull_limit=0)
         else:
             cache = Cache(self.db_location, size_limit=MAX_DISK_SIZE, cull_limit=0)
@@ -133,7 +139,10 @@ class Dataset(torch.utils.data.Dataset):
             if res:
                 cache[id] = res
 
-        if self.db_location and self.db_location.startswith("/dbfs"):
+        if self.db_location and self.write_to_temp:
+            print(
+                f"Copying from temp location {cache.directory} to {self.db_location}.."
+            )
             directory = cache.directory
             copytree(directory, self.db_location)
             cache = Cache(self.db_location, size_limit=MAX_DISK_SIZE, cull_limit=0)
