@@ -57,6 +57,7 @@ class BaseBertEncoder(nn.Module):
         dim_embed: int,
         max_length: int,
         normalize: bool = True,
+        device: torch.device = torch.device("cpu"),
     ) -> None:
         """
         model_name: e.g. bert-base-cased
@@ -71,6 +72,7 @@ class BaseBertEncoder(nn.Module):
         self.dim_embed = dim_embed
         self.max_length = max_length
         self.normalize = normalize
+        self.device = device
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         configuration = AutoConfig.from_pretrained(model_name)
@@ -85,7 +87,7 @@ class BaseBertEncoder(nn.Module):
         """
         Embed a list of texts into a (len(texts), self.dim_embed) embedding tensor.
         """
-        tokens = self.tokenize(texts)
+        tokens = self.tokenize(texts).to(self.device)
         out = self.encoder(**tokens, output_attentions=False)
         out = out.last_hidden_state[:, 0, :]  # Use CLS token
         if self.linear is not None:

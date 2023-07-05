@@ -5,6 +5,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 import numpy as np
 from typing import Union
+import os
 
 from mini_rec_sys.data import Session, SessionDataset, BatchedSequentialSampler
 from mini_rec_sys.evaluators import mean_with_se
@@ -102,6 +103,7 @@ class BaseModel(pl.LightningModule):
 
 def train(
     model: BaseModel,
+    num_dataloader_workers: int = 1,
     max_epochs: int = 20,
     limit_train_batches: int = 100,
     limit_val_batches: int = 20,
@@ -110,13 +112,17 @@ def train(
     precision: Union[int, str] = 32,
     checkpoint_metric: str = None,
     checkpoint_behaviour: str = "min",
+    default_root_dir: str = os.getcwd(),
     **kwargs,
 ):
     """
     Additional arguments / keyword arguments are passed into pl.Trainer.
     """
     train_loader = DataLoader(
-        model.train_dataset, batch_sampler=model.sampler, collate_fn=lambda x: x
+        model.train_dataset,
+        batch_sampler=model.sampler,
+        collate_fn=lambda x: x,
+        num_workers=num_dataloader_workers,
     )
 
     if model.val_dataset:
@@ -126,6 +132,7 @@ def train(
                 model.val_dataset, model.val_batch_size, drop_last=False
             ),
             collate_fn=lambda x: x,
+            num_workers=num_dataloader_workers,
         )
     else:
         val_loader = None
@@ -137,6 +144,7 @@ def train(
                 model.test_dataset, model.test_batch_size, drop_last=False
             ),
             collate_fn=lambda x: x,
+            num_workers=num_dataloader_workers,
         )
     else:
         test_loader = None
